@@ -1,40 +1,36 @@
 @Library("Shared") _
 pipeline{
-    
-    agent { label "dev"};
-    
+    agent any
     stages{
         stage("Code Clone"){
             steps{
-               script{
-                   clone("https://github.com/LondheShubham153/two-tier-flask-app.git", "master")
-               }
-            }
-        }
-        stage("Trivy File System Scan"){
-            steps{
-                script{
-                    trivy_fs()
-                }
+                git url:"https://github.com/VamshiCh27/two-tier-flask-app.git",branch:"master"
             }
         }
         stage("Build"){
             steps{
-                sh "docker build -t two-tier-flask-app ."
+                sh "docker build -t my_app ."
             }
-            
         }
         stage("Test"){
             steps{
-                echo "Developer / Tester tests likh ke dega..."
+                echo "No test cased for now"
             }
-            
         }
-        stage("Push to Docker Hub"){
+        stage("Push"){
             steps{
-                script{
-                    docker_push("dockerHubCreds","two-tier-flask-app")
-                }  
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker_creds',
+                    usernameVariable: 'docker_user',
+                    passwordVariable: 'docker_pass'
+                        )]) {
+                             sh '''
+                    echo "$docker_pass" | docker login -u "$docker_user" --password-stdin
+                    docker image tag my_app "$docker_user/two-teir-flask-app"
+                    docker push "$docker_user/two-teir-flask-app"
+                    '''
+                        }
+                echo "Test"
             }
         }
         stage("Deploy"){
@@ -43,23 +39,5 @@ pipeline{
             }
         }
     }
-
-post{
-        success{
-            script{
-                emailext from: 'mentor@trainwithshubham.com',
-                to: 'mentor@trainwithshubham.com',
-                body: 'Build success for Demo CICD App',
-                subject: 'Build success for Demo CICD App'
-            }
-        }
-        failure{
-            script{
-                emailext from: 'mentor@trainwithshubham.com',
-                to: 'mentor@trainwithshubham.com',
-                body: 'Build Failed for Demo CICD App',
-                subject: 'Build Failed for Demo CICD App'
-            }
-        }
-    }
+    
 }
